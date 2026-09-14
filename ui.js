@@ -11,6 +11,7 @@ let DAY = null;            // 달력에서 고른 날
 let BUSY = '';             // 동기화 진행 문구
 let TOAST = '';
 let PAGERX = 0;          // 넘겨 둔 카드 위치
+let SECRET = 0;          // 숨은 화면을 여는 연속 터치 수
 
 const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const pct = (a, b) => (b <= 0 ? 0 : Math.round((a / b) * 100));
@@ -324,8 +325,7 @@ function viewMore() {
       ${menu('캐릭터 불러오기', '넥슨 API 키로 계정의 캐릭터 조회', 'import')}
       <div class="hrline"></div>
       ${menu('결정석 가격 수정', '패치로 시세가 바뀌면 여기서', 'prices')}
-      <div class="hrline"></div>
-      ${menu('연결 설정', S.proxy ? '중계 서버 사용 중' : '넥슨에 직접 호출', 'settings')}
+      ${S.proxy ? '<div class="hrline"></div>' + menu('연결 설정', '중계 서버 사용 중', 'settings') : ''}
     `)}
     ${card(`
       <button class="opt" data-act="autosync">
@@ -340,7 +340,7 @@ function viewMore() {
       <div class="note">사파리 아래쪽 <b>공유 버튼</b> → <b>홈 화면에 추가</b> 를 누르면
       아이콘이 생기고 주소창 없이 앱처럼 열립니다.</div>
     </div>`)}
-    <div class="note pad">
+    <div class="note pad" data-act="secret">
       결정석 가격은 2026년 7월 1일 기준입니다. 파티로 잡으면 인원수만큼 나뉘고 소수점은 버립니다.<br>
       주간보스와 플래그·수로는 매주 목요일 0시, 검은 마법사는 매월 1일에 초기화됩니다.<br>
       키와 기록은 이 브라우저에만 저장되며 넥슨 외에는 어디로도 보내지 않습니다.
@@ -465,9 +465,9 @@ function viewSettings() {
   return `${topbar('연결 설정')}
     ${card(`<div class="pad">
       <div class="cap">중계 서버 주소</div>
-      <div class="note">브라우저가 넥슨 직접 호출을 막는 경우에만 씁니다.
-        저장소의 <b>worker.js</b> 를 Cloudflare Workers 에 올리면 나오는 주소를 넣으세요.
-        비워두면 넥슨으로 바로 호출합니다.</div>
+      <div class="note">지금은 넥슨이 브라우저 직접 호출을 허용하고 있어서 <b>비워두면 됩니다</b>.
+        나중에 막히면 저장소의 <b>worker.js</b> 를 Cloudflare Workers 에 올리고,
+        거기서 나온 주소를 여기에 넣으세요.</div>
       <input id="proxy" type="url" inputmode="url" autocapitalize="off" autocorrect="off"
              spellcheck="false" placeholder="https://내주소.workers.dev" value="${esc(S.proxy || '')}">
       <button class="wide mt" data-act="saveproxy">저장</button>
@@ -593,6 +593,13 @@ app.addEventListener('click', async (ev) => {
     case 'saveproxy': {
       S.proxy = (document.getElementById('proxy').value || '').trim();
       save(); toast(S.proxy ? '중계 서버를 저장했습니다.' : '넥슨에 직접 호출합니다.');
+      break;
+    }
+    case 'secret': {
+      // 평소엔 쓸 일 없는 화면입니다. 넥슨이 브라우저 직접 호출을 막는 날에만 필요해서,
+      // 안내 문구를 일곱 번 누르면 열리도록 숨겨 두었습니다.
+      SECRET += 1;
+      if (SECRET >= 7) { SECRET = 0; PAGE = 'settings'; render(); }
       break;
     }
     case 'wipe':
