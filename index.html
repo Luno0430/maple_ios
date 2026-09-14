@@ -245,7 +245,13 @@ main.nopad{padding-top:0}
 </head>
 <body>
 <div id="app"></div>
-<script src="app.js"></script>
-<script src="ui.js"></script>
+<!--
+  ?v= 숫자는 캐시 때문에 붙입니다.
+  깃허브 Pages 는 파일을 10분쯤 브라우저에 물려두는데, 이 숫자가 그대로면
+  index.html 만 새것이고 js 는 옛것인 어정쩡한 상태가 될 수 있습니다.
+  js 를 고쳐 올릴 때마다 이 숫자를 1씩 올리세요. (아래 APP_VERSION 도 같이)
+-->
+<script src="app.js?v=2"></script>
+<script src="ui.js?v=2"></script>
 </body>
 </html>
