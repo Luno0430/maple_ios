@@ -1,5 +1,8 @@
 /* 화면 그리기 — 순수 DOM. 프레임워크 없음 */
 
+/** 더보기 맨 아래에 표시됩니다. index.html 의 ?v= 숫자와 같이 올리세요. */
+const APP_VERSION = '2 · 2026-09-14';
+
 'use strict';
 
 const app = document.getElementById('app');
@@ -343,7 +346,8 @@ function viewMore() {
     <div class="note pad" data-act="secret">
       결정석 가격은 2026년 7월 1일 기준입니다. 파티로 잡으면 인원수만큼 나뉘고 소수점은 버립니다.<br>
       주간보스와 플래그·수로는 매주 목요일 0시, 검은 마법사는 매월 1일에 초기화됩니다.<br>
-      키와 기록은 이 브라우저에만 저장되며 넥슨 외에는 어디로도 보내지 않습니다.
+      키와 기록은 이 브라우저에만 저장되며 넥슨 외에는 어디로도 보내지 않습니다.<br>
+      <span style="opacity:.7">버전 ${APP_VERSION}</span>
     </div>`;
 }
 
