@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>주간 메이플</title>
+<meta name="description" content="메이플스토리 주간보스 정산 — 넥슨 스케줄러와 맞춰 자동으로 채웁니다">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="주간 메이플">
+<meta name="theme-color" content="#111113">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<style>
+:root{
+  --ground:#111113; --panel:#1B1B1F; --panel2:#232329; --panel3:#2E2E36;
+  --line:#34343D; --lineSoft:#26262C;
+  --text:#F6F6F8; --text2:#C6C6CE; --muted:#8A8A95;
+  --accent:#FF7A2F; --accentWash:#2A1810; --gold:#FFB93D; --ink:#17110A;
+  --easy:#33D6B8; --normal:#57A8FF; --hard:#B98CFF; --chaos:#FF9F45; --ex:#FF6B6B;
+  --pad:16px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--ground);overscroll-behavior-y:none}
+body{
+  color:var(--text);
+  font:14px/1.55 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+main{
+  padding:calc(env(safe-area-inset-top) + 10px) var(--pad) 96px;
+  max-width:640px;margin:0 auto;
+}
+button,input,a.wide{font:inherit;color:inherit}
+button{background:none;border:0;padding:0;cursor:pointer;text-align:left}
+input{
+  width:100%;margin-top:10px;background:var(--panel2);border:1px solid var(--line);
+  border-radius:11px;color:var(--text);font-size:16px;padding:11px 12px;
+}
+input:focus{outline:none;border-color:var(--accent)}
+a{color:var(--accent)}
+
+/* 머리말 ------------------------------------------------- */
+.head{display:flex;align-items:center;gap:10px;margin:4px 0 14px}
+.head .grow,.grow{flex:1;min-width:0}
+.title{font-size:19px;font-weight:800;letter-spacing:-.3px}
+.sub{color:var(--muted);font-size:11.5px}
+.cap{color:var(--text2);font-size:12px;font-weight:600}
+.cap2{color:var(--muted);font-size:11.5px;margin-top:2px}
+.cap3{color:var(--muted);font-size:11px}
+.center{text-align:center}
+.gold{color:var(--gold)}
+.big{font-size:26px;font-weight:800;letter-spacing:-.6px;margin-top:2px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.mt{margin-top:10px}
+.hr{height:1px;background:var(--lineSoft);margin:12px 0}
+.hrline{height:1px;background:var(--lineSoft)}
+.note{color:var(--muted);font-size:11.5px;line-height:1.7}
+.pad{padding:15px}
+.pad0{padding:0 2px 8px}
+.dim{color:var(--muted)}
+
+/* 카드 --------------------------------------------------- */
+.card{background:var(--panel);border:1px solid var(--lineSoft);border-radius:15px;overflow:hidden;margin-bottom:12px}
+.card.pad{padding:15px}
+.empty{padding:26px 20px;text-align:center;color:var(--muted);font-size:13px}
+.empty button{margin-top:12px;background:var(--accent);color:var(--ink);font-weight:700;
+  border-radius:11px;padding:10px 16px;font-size:13px}
+.folded{padding:22px 4px;text-align:center;color:var(--muted);font-size:12.5px}
+
+/* 진행 막대 ---------------------------------------------- */
+.bar{height:7px;border-radius:99px;background:var(--panel3);overflow:hidden;margin-top:10px}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .25s}
+.cd{color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
+
+/* 위젯 넘기기 -------------------------------------------- */
+.pager{
+  display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none;margin:0 -2px;
+}
+.pager::-webkit-scrollbar{display:none}
+.page{flex:0 0 100%;scroll-snap-align:center;padding:0 2px}
+.page .card{margin-bottom:6px}
+.dots{display:flex;gap:5px;justify-content:center;margin:2px 0 14px}
+.dots b{width:5px;height:5px;border-radius:99px;background:var(--line)}
+.dots b.on{background:var(--accent)}
+
+/* 비중 그래프 -------------------------------------------- */
+.stack{display:flex;gap:2px;height:34px;margin:12px 0 10px}
+.stack .seg{position:relative;border-radius:4px;overflow:hidden;min-width:3px}
+.stack .seg i{position:absolute;left:0;right:0;bottom:0;border-radius:0 0 4px 4px}
+.srow{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12.5px}
+.srow .dot{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
+.srow .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.srow .pc{color:var(--muted);font-size:11.5px;min-width:34px;text-align:right}
+.srow .mz{color:var(--gold);font-size:11.5px;min-width:74px;text-align:right}
+
+/* 캐릭터 레일 -------------------------------------------- */
+.rail{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 0 12px;margin:0 -2px}
+.rail::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;background:var(--panel);border:1px solid var(--lineSoft);border-radius:12px;
+  padding:9px 13px;display:flex;flex-direction:column;gap:1px;min-width:92px}
+.chip.on{border-color:var(--accent);background:var(--accentWash)}
+.chip .nm{font-size:13px;font-weight:700}
+.chip .ct{font-size:11px;color:var(--muted)}
+.chip.on .ct{color:var(--accent)}
+
+/* 캐릭터 카드 -------------------------------------------- */
+.thead{display:flex;align-items:center;gap:9px;padding:13px 15px}
+.thead .cap3{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tname{font-size:16px;font-weight:800}
+.caret{color:var(--muted);font-size:11px}
+.pill{background:var(--panel2);color:var(--muted);font-size:11px;font-weight:700;
+  border-radius:99px;padding:3px 9px;white-space:nowrap}
+.pill.warn{color:var(--ex)}
+.link{color:var(--accent);font-size:12px;font-weight:700;padding:4px}
+.subhead{display:flex;justify-content:space-between;background:var(--panel2);
+  padding:8px 14px;font-size:11.5px;color:var(--muted);font-weight:600}
+
+/* 보스 줄 ------------------------------------------------ */
+.brow{display:flex;align-items:center;gap:0;border-bottom:1px solid var(--lineSoft)}
+.brow:last-child{border-bottom:0}
+.brow.on{background:rgba(255,122,47,.14)}
+.railmark{width:4px;height:34px;border-radius:2px;background:transparent;flex:0 0 auto}
+.brow.on .railmark{background:var(--accent)}
+.btap{flex:1;min-width:0;display:flex;align-items:center;gap:11px;padding:10px 6px 10px 11px}
+.check{width:21px;height:21px;border-radius:7px;border:2px solid var(--line);flex:0 0 auto;position:relative}
+.check.on{background:var(--accent);border-color:var(--accent)}
+.check.on::after{content:"";position:absolute;left:6px;top:2px;width:5px;height:10px;
+  border:2px solid var(--ink);border-top:0;border-left:0;transform:rotate(42deg)}
+.bname{flex:1;min-width:0;font-size:14px;font-weight:500;position:relative}
+.bname em{font-style:normal;display:inline-block;max-width:100%;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom;position:relative}
+/* 취소선을 주황색으로 직접 긋습니다 — 기본 취소선은 글자색이라 흐릿합니다 */
+.bname.struck{color:var(--text2)}
+.bname.struck em::after{content:"";position:absolute;left:0;right:0;top:50%;
+  height:2.5px;border-radius:2px;background:var(--accent);transform:translateY(-50%)}
+.tier{font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 7px;white-space:nowrap}
+.t-easy{color:var(--easy);background:rgba(51,214,184,.15)}
+.t-normal{color:var(--normal);background:rgba(87,168,255,.15)}
+.t-hard{color:var(--hard);background:rgba(185,140,255,.15)}
+.t-chaos{color:var(--chaos);background:rgba(255,159,69,.15)}
+.t-ex{color:var(--ex);background:rgba(255,107,107,.15)}
+.t-muted{color:var(--muted);background:var(--panel2)}
+.party{font-size:10.5px;color:var(--muted);border:1px solid var(--line);border-radius:6px;
+  padding:2px 7px;white-space:nowrap;flex:0 0 auto}
+.party.on{color:var(--normal);border-color:transparent;background:rgba(87,168,255,.16);font-weight:700}
+.brow .mz{font-size:12.5px;color:var(--text2);min-width:80px;text-align:right;padding-right:15px;
+  padding-left:9px;font-variant-numeric:tabular-nums}
+.brow .mz.gold{color:var(--gold);font-weight:700}
+
+/* 달력 --------------------------------------------------- */
+.calhead{display:flex;align-items:center;justify-content:space-between;padding:12px 14px}
+.calm{font-size:15px;font-weight:800;text-align:center}
+.dow{display:grid;grid-template-columns:repeat(7,1fr);padding:0 8px 6px;color:var(--muted);
+  font-size:11px;text-align:center}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;padding:0 8px 12px}
+.cell{aspect-ratio:1/1.08;border-radius:9px;background:var(--panel2);display:flex;
+  flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:2px}
+.cell.blank{background:transparent}
+.cell b{font-size:12px;font-weight:600;color:var(--text2)}
+.cell i{font-size:8.5px;font-style:normal;color:var(--gold);line-height:1.1;text-align:center}
+.cell.has{background:rgba(255,122,47,.13)}
+.cell.today b{color:var(--accent)}
+.cell.pick{outline:2px solid var(--accent)}
+.lrow{display:flex;align-items:center;gap:8px;padding:10px 15px;border-top:1px solid var(--lineSoft);font-size:12.5px}
+.lrow .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);flex:0 0 auto;max-width:35%}
+.lrow .bn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lrow .mz{min-width:74px;text-align:right}
+.cmp{display:flex;align-items:center;gap:9px;margin-top:9px;font-size:12px}
+.cmp span{width:44px;color:var(--muted);flex:0 0 auto}
+.cmp em{font-style:normal;min-width:78px;text-align:right;color:var(--text2);font-size:11.5px}
+.cbar{flex:1;height:8px;background:var(--panel2);border-radius:99px;overflow:hidden}
+.cbar i{display:block;height:100%;border-radius:99px}
+
+/* 더보기 · 목록 ------------------------------------------ */
+.menu,.opt{display:flex;align-items:center;gap:11px;width:100%;padding:15px}
+.menu b,.opt b{display:block;font-size:14.5px;font-weight:600}
+.menu i,.opt i{display:block;font-style:normal;font-size:11px;color:var(--muted);margin-top:1px}
+.chev{color:var(--muted);font-size:17px}
+.steps{margin:12px 0 14px;padding-left:20px;color:var(--text2);font-size:12.5px;line-height:1.8}
+.steps b{color:var(--text)}
+.warn-note{color:var(--gold);font-size:11.5px;line-height:1.7;margin-top:10px}
+
+/* 버튼 --------------------------------------------------- */
+.wide{display:block;width:100%;text-align:center;background:var(--accent);color:var(--ink);
+  font-weight:800;font-size:13.5px;border-radius:11px;padding:12px;text-decoration:none;margin-top:12px}
+.wide.off{background:transparent;border:1px solid var(--line);color:var(--muted)}
+.wide.danger{background:transparent;border:1px solid rgba(255,107,107,.5);color:var(--ex)}
+.ghost{border:1px solid var(--line);border-radius:10px;color:var(--text2);font-weight:700}
+.ghost.sm{font-size:12px;padding:7px 11px}
+.danger.sm{color:var(--ex);font-size:11.5px;font-weight:700;background:rgba(255,107,107,.12);
+  border-radius:8px;padding:5px 10px;flex:0 0 auto;margin-right:12px}
+.spacer{width:56px}
+
+/* 불러오기 ----------------------------------------------- */
+.irow{display:flex;align-items:center;border-bottom:1px solid var(--lineSoft)}
+.irow:last-child{border-bottom:0}
+.irow .left b{font-size:14px;font-weight:600;display:block}
+.irow .left i{font-style:normal;font-size:11px;color:var(--muted)}
+.err{background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.4);border-radius:13px;
+  padding:13px;font-size:12.5px;line-height:1.7;white-space:pre-wrap;margin-bottom:12px}
+
+/* 보스 선택 · 가격 --------------------------------------- */
+.prow{padding:12px 14px;border-bottom:1px solid var(--lineSoft)}
+.prow:last-child{border-bottom:0}
+.segs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-top:8px}
+.segs::-webkit-scrollbar{display:none}
+.seg2{flex:0 0 auto;background:var(--panel2);border:1px solid transparent;border-radius:10px;
+  padding:7px 11px;text-align:center}
+.seg2 b{display:block;font-size:12px;font-weight:700;color:var(--text2)}
+.seg2 i{display:block;font-style:normal;font-size:10px;color:var(--muted);margin-top:1px}
+.seg2.on{border-color:currentColor}
+.seg2.on b{color:inherit}
+.prow2{display:flex;align-items:center;gap:9px;padding:10px 14px;border-bottom:1px solid var(--lineSoft)}
+.prow2:last-child{border-bottom:0}
+.prow2 b{font-size:13px;font-weight:600}
+.num{width:104px;margin:0;padding:8px 10px;font-size:15px;text-align:right;flex:0 0 auto}
+
+/* 상단바 · 탭 -------------------------------------------- */
+.topbar{display:flex;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top) + 10px) 0 14px}
+.tbt{font-size:16px;font-weight:800}
+main.nopad{padding-top:0}
+.tabs{
+  position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--panel);
+  border-top:1px solid var(--lineSoft);padding-bottom:env(safe-area-inset-bottom);
+}
+.tab{flex:1;padding:8px 0 9px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.tab i{width:26px;height:3px;border-radius:2px;background:transparent}
+.tab.on i{background:var(--accent)}
+.tab b{font-size:13px;font-weight:600;color:var(--muted)}
+.tab em{font-style:normal;font-size:9.5px;color:var(--muted);opacity:.7}
+.tab.on b{color:var(--text);font-weight:800}
+.tab.on em{color:var(--accent);opacity:1}
+
+/* 알림 --------------------------------------------------- */
+.busy,.toast{
+  position:fixed;left:12px;right:12px;bottom:calc(74px + env(safe-area-inset-bottom));
+  background:var(--panel3);border:1px solid var(--line);border-radius:12px;
+  padding:11px 14px;font-size:12.5px;color:var(--text2);line-height:1.6;
+  max-width:616px;margin:0 auto;box-shadow:0 8px 24px rgba(0,0,0,.4);
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="app.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>

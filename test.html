@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>연결 확인 · 주간 메이플</title>
+<style>
+:root{--ground:#111113;--panel:#1B1B1F;--panel2:#232329;--line:#34343D;
+ --text:#F6F6F8;--text2:#C6C6CE;--muted:#8A8A95;--accent:#FF7A2F;--gold:#FFB93D;--ink:#17110A}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--ground)}
+body{color:var(--text);max-width:560px;margin:0 auto;
+ padding:max(18px,env(safe-area-inset-top)) 16px 40px;
+ font:14px/1.6 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif}
+h1{font-size:18px;margin:0 0 4px}
+.sub{color:var(--muted);font-size:12.5px;margin-bottom:18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+input{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+ color:var(--text);font:inherit;font-size:16px;padding:11px 12px}
+input:focus{outline:none;border-color:var(--accent)}
+.row{display:flex;gap:8px;margin-top:10px}
+button{flex:1;font:inherit;font-weight:700;font-size:13.5px;border-radius:10px;padding:12px;
+ border:1px solid transparent;background:var(--accent);color:var(--ink)}
+button.ghost{background:none;border-color:var(--line);color:var(--text2)}
+button:disabled{opacity:.55}
+.v{border-radius:12px;padding:14px;margin-bottom:14px;display:none}
+.v.show{display:block}
+.v h2{font-size:15px;margin:0 0 6px}
+.v p{margin:0;font-size:13px;color:var(--text2)}
+.ok{background:rgba(25,158,112,.14);border:1px solid rgba(25,158,112,.45)}
+.ok h2{color:#4FD1A5}
+.bad{background:rgba(217,83,79,.13);border:1px solid rgba(217,83,79,.45)}
+.bad h2{color:#FF8B87}
+.warn{background:rgba(255,185,61,.13);border:1px solid rgba(255,185,61,.45)}
+.warn h2{color:var(--gold)}
+pre{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;
+ font-size:11px;color:var(--muted);white-space:pre-wrap;word-break:break-all;margin:0 0 14px}
+.note{color:var(--muted);font-size:11.5px;line-height:1.7}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+
+<h1>🍁 연결 확인</h1>
+<div class="sub">브라우저에서 넥슨 API를 바로 부를 수 있는지 봅니다. 한 번만 하면 됩니다.</div>
+
+<div class="card">
+  <input id="key" type="text" inputmode="latin" autocapitalize="off" autocorrect="off"
+         spellcheck="false" placeholder="넥슨 API 키 (live_ 로 시작)">
+  <div class="row">
+    <button id="run">확인하기</button>
+    <button id="paste" class="ghost">붙여넣기</button>
+  </div>
+</div>
+
+<div id="v" class="v"><h2></h2><p></p></div>
+<pre id="d" hidden></pre>
+
+<div class="card">
+  <div class="note">
+    앱은 폰에서 넥슨으로 바로 요청을 보내면 되지만, 웹페이지는 다른 서버를 마음대로 부르지 못하게
+    브라우저가 막습니다(CORS). 넥슨이 허용해 두었으면 <b>서버 없이</b> 쓸 수 있고,
+    막아두었으면 저장소의 <b>worker.js</b> 를 Cloudflare Workers 에 올려 중계 서버를 하나 두면 됩니다.<br><br>
+    확인이 끝났으면 <a href="./">앱으로 가기</a>
+  </div>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+try { const k = localStorage.getItem('jubo_test_key'); if (k) $('#key').value = k; } catch (e) {}
+
+function show(kind, title, body, detail) {
+  const v = $('#v');
+  v.className = 'v show ' + kind;
+  v.querySelector('h2').textContent = title;
+  v.querySelector('p').textContent = body;
+  const d = $('#d');
+  if (detail) { d.textContent = detail; d.hidden = false; } else { d.hidden = true; }
+}
+
+$('#paste').onclick = async () => {
+  try {
+    const t = (await navigator.clipboard.readText()).trim();
+    if (t) $('#key').value = t;
+  } catch (e) { show('warn', '붙여넣기를 못 했습니다', '브라우저가 클립보드를 막았습니다. 직접 붙여넣어 주세요.'); }
+};
+
+$('#run').onclick = async () => {
+  const key = $('#key').value.trim();
+  if (!key) { show('warn', '키를 먼저 넣어 주세요', 'openapi.nexon.com 에서 받은 키를 붙여넣으세요.'); return; }
+  try { localStorage.setItem('jubo_test_key', key); } catch (e) {}
+
+  $('#run').disabled = true; $('#run').textContent = '확인 중…';
+  show('warn', '확인 중…', '넥슨 서버에 요청을 보내고 있습니다.');
+  try {
+    // x-nxopen-api-key 는 표준 헤더가 아니라서, 브라우저가 먼저 사전 요청(OPTIONS)을 보냅니다.
+    // 넥슨이 CORS 를 열어두지 않았다면 여기서 바로 실패합니다.
+    const res = await fetch('https://open.api.nexon.com/maplestory/v1/character/list',
+      { headers: { 'x-nxopen-api-key': key } });
+    const text = await res.text();
+    if (res.ok) {
+      let n = null;
+      try {
+        const j = JSON.parse(text);
+        const l = (j.account_list && j.account_list[0] && j.account_list[0].character_list) || j.character_list || [];
+        n = Array.isArray(l) ? l.length : null;
+      } catch (e) {}
+      show('ok', '됩니다 — 서버 없이 쓸 수 있어요',
+        n === null ? '넥슨이 브라우저 요청을 받아줬습니다.'
+                   : '넥슨이 브라우저 요청을 받아줬고, 캐릭터 ' + n + '명이 조회됐습니다.',
+        text.slice(0, 1200));
+    } else {
+      show('warn', 'CORS 는 통과, 키 쪽 문제',
+        '브라우저 차단은 없었습니다(= 서버 없이 가능). 다만 넥슨이 HTTP ' + res.status + ' 로 거절했습니다.',
+        text.slice(0, 1200));
+    }
+  } catch (e) {
+    show('bad', '브라우저가 막았습니다 — 중계 서버가 필요합니다',
+      'worker.js 를 Cloudflare Workers 에 올리고, 그 주소를 앱의 더보기 → 연결 설정에 넣으면 됩니다.',
+      e.name + ': ' + e.message);
+  } finally {
+    $('#run').disabled = false; $('#run').textContent = '확인하기';
+  }
+};
+</script>
+</body>
+</html>
